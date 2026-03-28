@@ -4143,7 +4143,7 @@ async function callLLM(messages, raceState, memory, modelOutputs={}) {
     return m;
   });
 
-  const response = await fetch('/api/chat', {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
