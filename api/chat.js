@@ -1,5 +1,3 @@
-// api/chat.js  –  Vercel serverless function
-// Keeps your ANTHROPIC_API_KEY server-side, never exposed to the browser.
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -7,10 +5,21 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set in environment' });
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set' });
   }
 
   try {
+    // Parse body — Vercel may pass it as string or object
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+
+    // Only pass allowed fields to Anthropic
+    const payload = {
+      model: body.model || 'claude-sonnet-4-20250514',
+      max_tokens: body.max_tokens || 400,
+      messages: body.messages,
+    };
+    if (body.system) payload.system = body.system;
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -18,7 +27,7 @@ export default async function handler(req, res) {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json();
