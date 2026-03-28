@@ -9,14 +9,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parse body — Vercel may pass it as string or object
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
 
-    // Only pass allowed fields to Anthropic
+    // Strip any extra fields — Anthropic only allows role + content
+    const messages = (body.messages || [])
+      .map(m => ({ role: m.role, content: String(m.content || '') }))
+      .filter(m => m.content && (m.role === 'user' || m.role === 'assistant'));
+
     const payload = {
       model: body.model || 'claude-sonnet-4-20250514',
       max_tokens: body.max_tokens || 400,
-      messages: body.messages,
+      messages,
     };
     if (body.system) payload.system = body.system;
 
@@ -31,11 +34,7 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(response.status).json(data);
-    }
-
+    if (!response.ok) return res.status(response.status).json(data);
     res.status(200).json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
